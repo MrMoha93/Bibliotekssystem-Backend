@@ -31,7 +31,7 @@ model Item {
   categoryId   String
   category     Category  @relation(fields: [categoryId], references: [id])
 
-  @@unique([title, type])
+  @@unique([title])
 }
 
 enum ItemType {
