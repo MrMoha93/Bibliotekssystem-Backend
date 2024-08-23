@@ -5,79 +5,122 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 router.get("/", async (req, res) => {
-  const categories = await prisma.category.findMany({
-    include: { items: true },
-  });
-  res.send(categories);
+  try {
+    const categories = await prisma.category.findMany({
+      include: { items: true },
+    });
+    res.status(200).send(categories);
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    res.status(500).send("An error occurred while fetching categories.");
+  }
 });
 
 router.post("/", async (req, res) => {
-  const name = req.body.name;
+  const { name } = req.body;
 
-  const existingCategory = await prisma.category.findUnique({
-    where: { name },
-  });
-
-  if (existingCategory) {
-    return res.status(400).send("Category name must be unique");
+  if (!name || typeof name !== "string" || name.trim() === "") {
+    return res
+      .status(400)
+      .send("Category name is required and must be a non-empty string.");
   }
 
-  const newCategory = await prisma.category.create({
-    data: { name },
-  });
+  try {
+    const existingCategory = await prisma.category.findUnique({
+      where: { name },
+    });
 
-  res.send(newCategory);
+    if (existingCategory) {
+      return res.status(400).send("Category name must be unique");
+    }
+
+    const newCategory = await prisma.category.create({
+      data: { name: name.trim() },
+    });
+
+    res.status(201).send(newCategory);
+  } catch (error) {
+    console.error("Error creating category:", error);
+    res.status(500).send("An error occurred while creating the category.");
+  }
 });
 
 router.put("/:id", async (req, res) => {
-  const id = req.params.id;
-  const name = req.body.name;
+  const { id } = req.params;
+  const { name } = req.body;
 
-  const category = await prisma.category.findUnique({
-    where: { id },
-  });
-
-  if (!category) {
-    return res.status(404).send("Category not found");
+  if (!name || typeof name !== "string" || name.trim() === "") {
+    return res
+      .status(400)
+      .send("Category name is required and must be a non-empty string.");
   }
 
-  const existingCategory = await prisma.category.findUnique({
-    where: { name },
-  });
+  try {
+    const category = await prisma.category.findUnique({
+      where: { id },
+    });
 
-  if (existingCategory && existingCategory.id !== id) {
-    return res.status(400).send("Category name must be unique");
+    if (!category) {
+      return res.status(404).send("Category not found");
+    }
+
+    const existingCategory = await prisma.category.findUnique({
+      where: { name },
+    });
+
+    if (existingCategory && existingCategory.id !== id) {
+      return res.status(400).send("Category name must be unique");
+    }
+
+    const updatedCategory = await prisma.category.update({
+      where: { id },
+      data: { name: name.trim() },
+    });
+
+    res.status(200).send(updatedCategory);
+  } catch (error) {
+    console.error("Error updating category:", error);
+    res.status(500).send("An error occurred while updating the category.");
   }
-
-  const updatedCategory = await prisma.category.update({
-    where: { id },
-    data: { name },
-  });
-
-  res.send(updatedCategory);
 });
 
 router.delete("/:id", async (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
 
-  const category = await prisma.category.findUnique({
-    where: { id },
-    include: { items: true },
-  });
+  try {
+    const category = await prisma.category.findUnique({
+      where: { id },
+    });
 
-  if (!category) {
-    return res.status(404).send("Category not found");
+    if (!category) {
+      return res.status(404).send("Category not found");
+    }
+
+    const items = await prisma.item.findMany({
+      where: {
+        category: {
+          id: id,
+        },
+      },
+    });
+
+    if (items.length > 0) {
+      return res
+        .status(400)
+        .send(
+          "Cannot delete category with existing items. Please remove the related items first."
+        );
+    }
+
+    await prisma.category.delete({
+      where: { id },
+    });
+
+    res.status(200).send(`Category with ID ${id} has been deleted.`);
+  } catch (error) {
+    console.error("Error deleting category:", error);
+    res.status(500).send("An error occurred while deleting the category.");
   }
-
-  if (category.items.length > 0) {
-    return res.status(400).send("Cannot delete category with existing items");
-  }
-
-  await prisma.category.delete({
-    where: { id },
-  });
-
-  res.send(`Category with ID ${id} has been deleted.`);
 });
 
 export default router;

@@ -10,31 +10,8 @@ router.get("/", async (req, res) => {
 });
 
 router.post("/", async (req, res) => {
-  const {
-    title,
-    type,
-    author,
-    nbrPages,
-    isBorrowable,
-    borrower,
-    borrowDate,
-    categoryId,
-  } = req.body;
-
-  const existingItem = await prisma.item.findUnique({
-    where: {
-      title: title,
-    },
-  });
-
-  if (existingItem) {
-    return res
-      .status(400)
-      .send("An item with this title and type already exists");
-  }
-
-  const newItem = await prisma.item.create({
-    data: {
+  try {
+    const {
       title,
       type,
       author,
@@ -43,10 +20,40 @@ router.post("/", async (req, res) => {
       borrower,
       borrowDate,
       categoryId,
-    },
-  });
+    } = req.body;
 
-  res.send(newItem);
+    if (!title || !type || !categoryId) {
+      return res.status(400).send("Title, type, and categoryId are required.");
+    }
+
+    const existingItem = await prisma.item.findUnique({
+      where: {
+        title: title,
+      },
+    });
+
+    if (existingItem) {
+      return res.status(400).send("An item with this title already exists");
+    }
+
+    const newItem = await prisma.item.create({
+      data: {
+        title,
+        type,
+        author: author || null,
+        nbrPages: nbrPages || null,
+        isBorrowable: isBorrowable || false,
+        borrower: borrower || null,
+        borrowDate: borrowDate ? new Date(borrowDate) : null,
+        categoryId,
+      },
+    });
+
+    res.status(201).json(newItem);
+  } catch (error) {
+    console.error("Error creating item:", error);
+    res.status(500).send("An error occurred while creating the item.");
+  }
 });
 
 router.get("/:id", async (req, res) => {
@@ -83,21 +90,35 @@ router.put("/:id", async (req, res) => {
     return res.status(404).send("Item not found");
   }
 
-  const updatedItem = await prisma.item.update({
-    where: { id },
-    data: {
-      title,
-      type,
-      author,
-      nbrPages,
-      isBorrowable,
-      borrower,
-      borrowDate,
-      categoryId,
-    },
-  });
+  let borrowDateValue = null;
+  if (borrowDate) {
+    borrowDateValue = new Date(borrowDate);
+    if (isNaN(borrowDateValue.getTime())) {
+      return res.status(400).send("Invalid borrow date");
+    }
+    borrowDateValue = borrowDateValue.toISOString();
+  }
 
-  res.send(updatedItem);
+  try {
+    const updatedItem = await prisma.item.update({
+      where: { id },
+      data: {
+        title,
+        type,
+        author,
+        nbrPages,
+        isBorrowable,
+        borrower: borrower || null,
+        borrowDate: borrowDateValue,
+        categoryId,
+      },
+    });
+
+    res.send(updatedItem);
+  } catch (error) {
+    console.error("Error updating item:", error);
+    res.status(500).send("An error occurred while updating the item.");
+  }
 });
 
 router.delete("/:id", async (req, res) => {
