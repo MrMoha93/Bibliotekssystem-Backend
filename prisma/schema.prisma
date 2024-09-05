@@ -20,16 +20,17 @@ model Category {
 }
 
 model Item {
-  id           String    @id @default(cuid())
-  title        String
-  type         ItemType
-  author       String?
-  nbrPages     Int?
-  isBorrowable Boolean
-  borrower     String?
-  borrowDate   DateTime?
-  categoryId   String
-  category     Category  @relation(fields: [categoryId], references: [id])
+  id             String    @id @default(cuid())
+  title          String
+  type           ItemType
+  author         String?
+  nbrPages       Int?
+  runTimeMinutes Int?
+  isBorrowable   Boolean
+  borrower       String?
+  borrowDate     DateTime?
+  categoryId     String
+  category       Category  @relation(fields: [categoryId], references: [id])
 
   @@unique([title])
 }
