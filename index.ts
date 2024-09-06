@@ -5,7 +5,15 @@ import cors from "cors";
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5588",
+      "http://localhost:4173",
+      "https://bibliotekssystem-frontend3.onrender.com",
+    ],
+  })
+);
 app.use(express.json());
 app.use("/api/categories", categories);
 app.use("/api/items", items);
