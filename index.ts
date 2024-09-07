@@ -10,6 +10,7 @@ app.use(
     origin: [
       "http://localhost:5588",
       "http://localhost:4173",
+      "http://localhost:5173",
       "https://bibliotekssystem-frontend3.onrender.com",
     ],
   })
